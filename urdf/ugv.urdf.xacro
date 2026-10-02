@@ -1,0 +1,238 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="mobile_robot">
+
+  <xacro:property name="chassis_mass"   value="8.00"/>
+  <xacro:property name="chassis_length" value="0.90"/>
+  <xacro:property name="chassis_width"  value="0.50"/>
+  <xacro:property name="chassis_height" value="0.30"/>
+
+  <xacro:property name="wheel_mass"     value="2.00"/>
+  <xacro:property name="wheel_radius"   value="0.150"/>
+  <xacro:property name="wheel_length"   value="0.06"/>
+
+  <xacro:property name="camera_mass"     value="0.150"/>
+  <xacro:property name="camera_length"   value="0.0450"/>
+  <xacro:property name="camera_width"   value="0.10"/>
+  <xacro:property name="camera_height"   value="0.040"/>
+
+  <material name="chassis_color"><color rgba="0.2 0.2 0.2 1"/></material>
+  <material name="wheel_color"><color rgba="0.05 0.05 0.05 1"/></material>
+  <material name="camera_color"><color rgba="0.0 0.0 0.8 1"/></material>
+
+  <xacro:macro name="box_inertia" params="m l w h">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${m}"/>
+      <inertia ixx="${(1.0/12.0) * m * (w*w + h*h)}" ixy="0.0" ixz="0.0"
+               iyy="${(1.0/12.0) * m * (l*l + h*h)}" iyz="0.0"
+               izz="${(1.0/12.0) * m * (l*l + w*w)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="wheel_cylinder_inertia" params="m r h">
+    <inertial>
+      <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+      <mass value="${m}"/>
+      <inertia ixx="${(1.0/12.0) * m * (3.0*r*r + h*h)}" ixy="0.0" ixz="0.0"
+               iyy="${(1.0/2.0) * m * (r*r)}" iyz="0.0"
+               izz="${(1.0/12.0) * m * (3.0*r*r + h*h)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="camera_inertia" params="m l w h">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${m}"/>
+      <inertia ixx="${(1.0/12.0) * m * (w*w + h*h)}" ixy="0.0" ixz="0.0"
+               iyy="${(1.0/12.0) * m * (l*l + h*h)}" iyz="0.0"
+               izz="${(1.0/2.0) * m * (l*l)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <link name="base_footprint"/>
+
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.28" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <xacro:box_inertia m="${chassis_mass}" l="${chassis_length}" w="${chassis_width}" h="${chassis_height}"/>
+    <visual name="base_link_visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+      <material name="chassis_color"/>
+    </visual>
+    <collision name="base_link_collision">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <gazebo reference="base_link">
+    <material>Gazebo/DarkGrey</material>
+  </gazebo>
+
+  <xacro:macro name="wheel" params="prefix x_reflect y_reflect">
+    <link name="${prefix}_wheel">
+      <xacro:wheel_cylinder_inertia m="${wheel_mass}" r="${wheel_radius}" h="${wheel_length}"/>
+      <visual name="${prefix}_wheel_visual">
+        <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_length}"/>
+        </geometry>
+        <material name="wheel_color"/>
+      </visual>
+      <collision name="${prefix}_wheel_collision">
+        <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_length}"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <gazebo reference="${prefix}_wheel">
+      <mu1>1.5</mu1>
+      <mu2>1.5</mu2>
+      <kp>1000000.0</kp>
+      <kd>100.0</kd>
+    </gazebo>
+
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <origin xyz="${x_reflect * 0.250} ${y_reflect * 0.28} -0.13" rpy="0 0 0"/>
+      <parent link="base_link"/>
+      <child link="${prefix}_wheel"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:wheel prefix="right_front" x_reflect="1"  y_reflect="-1"/>
+  <xacro:wheel prefix="right_rear"  x_reflect="-1" y_reflect="-1"/>
+  <xacro:wheel prefix="left_front"  x_reflect="1"  y_reflect="1"/>
+  <xacro:wheel prefix="left_rear"   x_reflect="-1" y_reflect="1"/>
+
+  <link name="camera_link">
+    <xacro:camera_inertia m="${camera_mass}" l="${camera_length}" w="${camera_width}" h="${camera_height}"/>
+    <visual name="camera_visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${camera_length} ${camera_width} ${camera_height}"/>
+      </geometry>
+      <material name="camera_color"/>
+    </visual>
+    <collision name="camera_collision">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${camera_length} ${camera_width} ${camera_height}"/>
+      </geometry>
+    </collision>
+    
+  </link>
+  <link name="camera_optical_link"/>
+  <joint name="camera_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_optical_link"/>
+    <origin xyz="0 0 0" rpy="-1.5708 0 -1.5708"/>
+  </joint>
+  <link name="camera_accel_gyro_link"/>
+  <joint name="camera_imu_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_accel_gyro_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <joint name="camera_joint" type="fixed">
+    <origin xyz="0.45 0 0.17" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+  </joint>
+
+  <gazebo>
+    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
+      <left_joint>left_front_wheel_joint</left_joint>
+      <left_joint>left_rear_wheel_joint</left_joint>
+      <right_joint>right_front_wheel_joint</right_joint>
+      <right_joint>right_rear_wheel_joint</right_joint>
+      <wheel_separation>0.56</wheel_separation>
+      <wheel_radius>${wheel_radius}</wheel_radius>
+      <topic>/cmd_vel</topic>
+
+      </plugin>
+
+      <plugin
+        filename="gz-sim-odometry-publisher-system"
+        name="gz::sim::systems::OdometryPublisher">
+        <odom_frame>odom</odom_frame>
+        <robot_base_frame>base_footprint</robot_base_frame>
+        <odom_publish_frequency>50</odom_publish_frequency>
+        <odom_topic>/odom</odom_topic>
+        <tf_topic>/tf</tf_topic>
+        <dimensions>2</dimensions>
+        </plugin>
+    
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+      <topic>/joint_states</topic>
+      <joint_name>left_front_wheel_joint</joint_name>
+      <joint_name>left_rear_wheel_joint</joint_name>
+      <joint_name>right_front_wheel_joint</joint_name>
+      <joint_name>right_rear_wheel_joint</joint_name>
+    </plugin>
+  </gazebo>
+  <gazebo reference="camera_link">
+    <!-- 1. Stereo RGBD Vision Engine -->
+    <sensor name="realsense_d435i_color" type="rgbd_camera">
+      <camera>
+        <!-- RealSense D435i Horizontal FOV (~87 deg) -->
+        <horizontal_fov>1.518</horizontal_fov>
+        <image>
+          <width>640</width>
+          <height>480</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.1</near>
+          <far>10.0</far>
+        </clip>
+        <depth_camera>
+          <clip>
+            <near>0.2</near>
+            <far>10.0</far>
+          </clip>
+        </depth_camera>
+        
+      </camera>
+      <always_on>1</always_on>
+      <update_rate>15</update_rate>
+      <visualize>true</visualize>
+      <topic>/camera/image_raw</topic>
+      <gz_frame_id>camera_link</gz_frame_id>
+    </sensor>
+
+    <!-- 2. Onboard 6-DoF IMU Engine -->
+    <sensor name="realsense_d435i_imu" type="imu">
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <visualize>false</visualize>
+      <topic>/camera/imu</topic>
+      <gz_frame_id>camera_accel_gyro_link</gz_frame_id>
+      <imu>
+        <angular_velocity>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.001</stddev></noise></z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.01</stddev></noise></z>
+        </linear_acceleration>
+      </imu>
+    </sensor>
+  </gazebo>
+
+</robot>
